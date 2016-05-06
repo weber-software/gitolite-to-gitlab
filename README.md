@@ -1,6 +1,6 @@
 # gitolite-to-gitlab
 
-automatically exports git projects from a gitolite server to an gitlab server.
+a node.js script to automatically exports git projects from a gitolite server to an gitlab server.
 
 1.  it creates groups on the gitlab server
 2.  inside these groups the new repositories are created
@@ -8,7 +8,7 @@ automatically exports git projects from a gitolite server to an gitlab server.
 
 ## Groups
 
-Subpaths (git@my-private-gitolite.de/blaa/blubb/project) from the gitolite server are not directly supported by gitlab.
+Subpaths (git@my-private-gitolite.de:/blaa/blubb/project) from the gitolite server are not directly supported by gitlab.
 Gitlab also doesn't support sub groups.
 Because of that groups are created that are named by the complete path and seperated by a dot ("/blaa/blubb/project" -> group: "blaa.blubb")
 
