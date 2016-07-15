@@ -22,14 +22,23 @@ function extractRepos(data) {
     return result;
 }
 
-function getPath(repo) {
+function getPath(repo, filter) {
+    var original = repo;
+
+    if (filter) {
+        if (repo.indexOf(filter) !== 0) {
+            return;
+        }
+        repo = repo.substring(filter.length);
+    }
+
     //"+ seems to be not supported by gitlab so change it to "-"
     var parts = repo.replace('+', '-').split('/');
     if (parts.length < 1) {
         return;
     }
     if  (parts.length === 1) {
-        return { name: parts[0], original: repo  };
+        return { name: parts[0], original: original  };
     }
     var group = "";
     for (var i = 0; i < parts.length - 1; i++) {
@@ -38,13 +47,16 @@ function getPath(repo) {
         }
         group += parts[i];
     }
-    return { name: parts[parts.length - 1], group: group, original: repo };
+    return { name: parts[parts.length - 1], group: group, original: original };
 }
 
-function lookup(repos) {
+function lookup(repos, filter) {
     var result = [];
     for (var i = 0; i < repos.length; i++) {
-        result.push(getPath(repos[i]));
+        var repo = getPath(repos[i], filter);
+        if (repo) {
+            result.push(repo);
+        }
     }
     return result;
 }
@@ -62,13 +74,17 @@ function extractGroups(repos) {
 //gitlab
 function request(url, token, path, data) {
     var cmd = 'curl -s';
+    cmd += ' --insecure';
     cmd += ' -H "PRIVATE-TOKEN: ' + token + '"';
     cmd += ' -H "Content-Type:application/json"';
     if (data !== undefined) {
         cmd += ' -d \'' + JSON.stringify(data) + '\'';
     }
-    cmd += ' ' + url + '/api/v3/' + path + '?per_page=100&page=1';
-    return JSON.parse(exec.execSync(cmd));
+    cmd += ' "' + url + '/api/v3/' + path + '?per_page=100&page=1"';
+    var result = exec.execSync(cmd);
+    console.log(cmd);
+    console.log(result.toString());
+    return JSON.parse(result);
 }
 
 function createRepo(url, token, repoName, namespaceId) {
@@ -159,18 +175,19 @@ function transferRepos(originalPath, repos, projects, username) {
 var source = process.env.GITOLITE;
 var token = process.env.GITLAB_TOKEN;
 var url = process.env.GITLAB_URL;
+var filter = process.env.PROJECT_FILTER;
 
 if (!source || !token || !url) {
     console.log("required environment variables: GITOLITE GITLAB_TOKEN GITLAB_URL");
     return;
 }
 
-console.log('will copy repositories from ' + source + ' to ' + url);
+console.log('will copy repositories' + (filter ? ' starting with ' + filter : '') + ' from ' + source + ' to ' + url);
 
 //we log in to get a list of all repositories
 var result = exec.execSync('ssh ' + source).toString('utf8');
 var sourceRepos = extractRepos(result);
-var newRepos = lookup(sourceRepos);
+var newRepos = lookup(sourceRepos, filter);
 var groups = extractGroups(newRepos);
 
 //get our username on the gitlab server
